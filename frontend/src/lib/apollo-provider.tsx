@@ -9,8 +9,12 @@ import { setContext } from '@apollo/client/link/context';
 import React, { useMemo } from 'react';
 import { useAuth } from './auth-context';
 
-const HASURA_HTTP = process.env.NEXT_PUBLIC_HASURA_HTTP_URL || 'http://localhost:8080/v1/graphql';
+const HASURA_HTTP_DIRECT = process.env.NEXT_PUBLIC_HASURA_HTTP_URL || 'http://localhost:8080/v1/graphql';
 const HASURA_WS = process.env.NEXT_PUBLIC_HASURA_WS_URL || 'ws://localhost:8080/v1/graphql';
+
+// In the browser, route GraphQL through our proxy to avoid JWT signature mismatch
+// The proxy verifies our HS256 JWT and forwards to Hasura with admin secret + session vars
+const HASURA_HTTP = typeof window !== 'undefined' ? '/api/graphql' : HASURA_HTTP_DIRECT;
 
 function createApolloClient(token: string | null) {
   const httpLink = new HttpLink({ uri: HASURA_HTTP });
