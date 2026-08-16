@@ -11,6 +11,7 @@ const HASURA_ADMIN_SECRET =
   "nhost-admin-secret";
 
 export async function executeGraphQL(query: string, variables: any = {}) {
+  console.log("[executeGraphQL] URL:", HASURA_URL, "| Admin secret length:", HASURA_ADMIN_SECRET.length);
   const res = await fetch(HASURA_URL, {
     method: "POST",
     headers: {
@@ -21,6 +22,7 @@ export async function executeGraphQL(query: string, variables: any = {}) {
   });
   const data = await res.json();
   if (data.errors) {
+    console.error("[executeGraphQL] Error:", JSON.stringify(data.errors));
     throw new Error(data.errors[0]?.message || "GraphQL Execution Error");
   }
   return data.data;

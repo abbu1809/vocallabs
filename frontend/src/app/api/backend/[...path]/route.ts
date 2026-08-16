@@ -64,31 +64,50 @@ export async function POST(
         );
       }
 
-      // Ensure user exists in public.users to satisfy FK constraint
-      const ensureUserMutation = `
-        mutation EnsureUser($id: uuid!, $email: String!, $display_name: String!) {
-          insert_users_one(
-            object: {
-              id: $id,
-              email: $email,
-              password_hash: "authenticated",
-              display_name: $display_name
-            },
-            on_conflict: {
-              constraint: users_pkey,
-              update_columns: [display_name]
-            }
-          ) {
+      // Ensure user exists in public.users to satisfy FK constraint on org_members
+      const userEmail = email || `${user_id}@vocallabs.internal`;
+      const userName = display_name || "Workspace Owner";
+
+      console.log("[create-organization] Ensuring user exists:", { user_id, userEmail, userName });
+
+      // First, check if user already exists
+      const checkUserQuery = `
+        query CheckUser($id: uuid!) {
+          users_by_pk(id: $id) {
             id
           }
         }
       `;
 
-      await executeGraphQL(ensureUserMutation, {
-        id: user_id,
-        email: email || `${user_id}@vocallabs.internal`,
-        display_name: display_name || "Workspace Owner",
-      }).catch((err) => console.warn("[ensureUser warning]", err.message));
+      const existingUser = await executeGraphQL(checkUserQuery, { id: user_id });
+
+      if (!existingUser.users_by_pk) {
+        console.log("[create-organization] User not found, inserting...");
+        const insertUserMutation = `
+          mutation InsertUser($id: uuid!, $email: String!, $password_hash: String!, $display_name: String!) {
+            insert_users_one(
+              object: {
+                id: $id,
+                email: $email,
+                password_hash: $password_hash,
+                display_name: $display_name
+              }
+            ) {
+              id
+            }
+          }
+        `;
+
+        await executeGraphQL(insertUserMutation, {
+          id: user_id,
+          email: userEmail,
+          password_hash: "authenticated",
+          display_name: userName,
+        });
+        console.log("[create-organization] User inserted successfully");
+      } else {
+        console.log("[create-organization] User already exists:", existingUser.users_by_pk.id);
+      }
 
       const orgId = uuidv4();
       const mutation = `
