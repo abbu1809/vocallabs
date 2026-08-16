@@ -3,6 +3,8 @@ project_name = "vocallabs"
 
 [hasura]
 version = "v2.44.0"
+admin_secret = "nhost-admin-secret"
+webhook_secret = "nhost-webhook-secret"
 jwt_secrets = [
   { type = "HS256", key = "0123456789012345678901234567890123456789012345678901234567891234" }
 ]
