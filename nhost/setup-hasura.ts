@@ -7,8 +7,35 @@
  * Run with: npx ts-node setup-hasura.ts
  */
 
+import fs from 'fs';
+import path from 'path';
+
 const HASURA_URL = process.env.HASURA_URL || 'http://localhost:8080';
 const ADMIN_SECRET = process.env.HASURA_ADMIN_SECRET || 'nhost-admin-secret';
+
+async function runSql(sql: string) {
+  const res = await fetch(`${HASURA_URL}/v2/query`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-hasura-admin-secret': ADMIN_SECRET,
+    },
+    body: JSON.stringify({
+      type: 'run_sql',
+      args: {
+        source: 'default',
+        sql,
+      },
+    }),
+  });
+  const data = await res.json();
+  if (data.errors || data.error) {
+    console.warn('⚠️ SQL Warning:', data.error || data.errors);
+  } else {
+    console.log('✅ SQL Migration executed successfully');
+  }
+  return data;
+}
 
 async function hasuraRequest(body: any) {
   const res = await fetch(`${HASURA_URL}/v1/metadata`, {
@@ -76,10 +103,32 @@ async function setPermission(
 }
 
 async function main() {
-  console.log('\n🔧 Setting up Hasura metadata...\n');
+  console.log('\n🔧 Setting up Hasura schema and metadata...\n');
+
+  // ── 0. Run SQL Migrations ──────────────────────────────
+  console.log('--- Running SQL schema migrations & seed ---');
+  try {
+    const schemaSql = fs.readFileSync(
+      path.join(__dirname, 'migrations', 'default', '1_initial', 'up.sql'),
+      'utf8'
+    );
+    await runSql(schemaSql);
+  } catch (err: any) {
+    console.warn('⚠️ Could not load up.sql:', err.message);
+  }
+
+  try {
+    const seedSql = fs.readFileSync(
+      path.join(__dirname, 'seeds', 'default', 'seed.sql'),
+      'utf8'
+    );
+    await runSql(seedSql);
+  } catch (err: any) {
+    console.warn('⚠️ Could not load seed.sql:', err.message);
+  }
 
   // ── 1. Track Tables ────────────────────────────────────
-  console.log('--- Tracking tables ---');
+  console.log('\n--- Tracking tables ---');
   const tables = [
     'users', 'organizations', 'org_members', 'workflows',
     'workflow_steps', 'workflow_triggers', 'workflow_runs',

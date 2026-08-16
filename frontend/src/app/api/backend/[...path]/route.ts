@@ -55,7 +55,7 @@ export async function POST(
     // ── 1. Create Organization Handler ──────────────────────────────
     if (subpath.endsWith("create-organization")) {
       const payload = body.input || body;
-      const { name, user_id } = payload;
+      const { name, user_id, email, display_name } = payload;
 
       if (!name || !user_id) {
         return NextResponse.json(
@@ -63,6 +63,32 @@ export async function POST(
           { status: 400 }
         );
       }
+
+      // Ensure user exists in public.users to satisfy FK constraint
+      const ensureUserMutation = `
+        mutation EnsureUser($id: uuid!, $email: String!, $display_name: String!) {
+          insert_users_one(
+            object: {
+              id: $id,
+              email: $email,
+              password_hash: "authenticated",
+              display_name: $display_name
+            },
+            on_conflict: {
+              constraint: users_pkey,
+              update_columns: [display_name]
+            }
+          ) {
+            id
+          }
+        }
+      `;
+
+      await executeGraphQL(ensureUserMutation, {
+        id: user_id,
+        email: email || `${user_id}@vocallabs.internal`,
+        display_name: display_name || "Workspace Owner",
+      }).catch((err) => console.warn("[ensureUser warning]", err.message));
 
       const orgId = uuidv4();
       const mutation = `

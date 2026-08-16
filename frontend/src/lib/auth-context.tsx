@@ -150,7 +150,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const res = await fetch(`${FUNCTIONS_URL}/api/create-organization`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ input: { name, user_id: user.id } }),
+      body: JSON.stringify({
+        input: {
+          name,
+          user_id: user.id,
+          email: user.email,
+          display_name: user.display_name,
+        },
+      }),
     });
 
     if (!res.ok) {
