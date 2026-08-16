@@ -73,7 +73,7 @@ export async function POST(
       // First, check if user already exists
       const checkUserQuery = `
         query CheckUser($id: uuid!) {
-          users_by_pk(id: $id) {
+          app_users_by_pk(id: $id) {
             id
           }
         }
@@ -81,11 +81,11 @@ export async function POST(
 
       const existingUser = await executeGraphQL(checkUserQuery, { id: user_id });
 
-      if (!existingUser.users_by_pk) {
+      if (!existingUser.app_users_by_pk) {
         console.log("[create-organization] User not found, inserting...");
         const insertUserMutation = `
           mutation InsertUser($id: uuid!, $email: String!, $password_hash: String!, $display_name: String!) {
-            insert_users_one(
+            insert_app_users_one(
               object: {
                 id: $id,
                 email: $email,
@@ -106,7 +106,7 @@ export async function POST(
         });
         console.log("[create-organization] User inserted successfully");
       } else {
-        console.log("[create-organization] User already exists:", existingUser.users_by_pk.id);
+        console.log("[create-organization] User already exists:", existingUser.app_users_by_pk.id);
       }
 
       const orgId = uuidv4();
@@ -161,7 +161,7 @@ export async function POST(
 
       const getUserQuery = `
         query GetUser($email: String!) {
-          users(where: { email: { _eq: $email } }) {
+          app_users(where: { email: { _eq: $email } }) {
             id
             email
             password_hash
@@ -175,7 +175,7 @@ export async function POST(
       `;
 
       const data = await executeGraphQL(getUserQuery, { email });
-      const user = data.users?.[0];
+      const user = data.app_users?.[0];
 
       if (!user) {
         return NextResponse.json(
@@ -246,13 +246,13 @@ export async function POST(
 
       const checkQuery = `
         query CheckUser($email: String!) {
-          users(where: { email: { _eq: $email } }) {
+          app_users(where: { email: { _eq: $email } }) {
             id
           }
         }
       `;
       const existing = await executeGraphQL(checkQuery, { email });
-      if (existing.users && existing.users.length > 0) {
+      if (existing.app_users && existing.app_users.length > 0) {
         return NextResponse.json(
           { message: "A user with this email already exists" },
           { status: 409 }
@@ -265,7 +265,7 @@ export async function POST(
 
       const registerMutation = `
         mutation RegisterUser($user_id: uuid!, $email: String!, $password_hash: String!, $display_name: String!, $org_id: uuid!, $org_name: String!) {
-          insert_users_one(object: {
+          insert_app_users_one(object: {
             id: $user_id,
             email: $email,
             password_hash: $password_hash,
