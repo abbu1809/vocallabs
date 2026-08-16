@@ -273,7 +273,7 @@ export default function WorkflowDetailPage() {
   const { data, loading, refetch } = useQuery<any>(GET_WORKFLOW_DETAIL, {
     variables: { id: workflowId },
     skip: !workflowId || !isAuthenticated,
-    pollInterval: 10000,
+    pollInterval: 3000,
   });
 
   const workflow = data?.workflows_by_pk;
@@ -336,7 +336,7 @@ export default function WorkflowDetailPage() {
     }
   };
 
-  // Live Subscriptions
+  // Live Subscriptions & Fallback
   const { data: stepRunsData } = useSubscription<any>(SUBSCRIBE_STEP_RUNS, {
     variables: { workflow_run_id: activeRunId },
     skip: !activeRunId,
@@ -347,8 +347,9 @@ export default function WorkflowDetailPage() {
     skip: !activeRunId,
   });
 
-  const liveStepRuns = stepRunsData?.step_runs || [];
-  const liveRunStatus = runData?.workflow_runs_by_pk?.status;
+  const activeRun = workflow?.workflow_runs?.find((r: any) => r.id === activeRunId) || workflow?.workflow_runs?.[0];
+  const liveStepRuns = (stepRunsData?.step_runs?.length ? stepRunsData.step_runs : activeRun?.step_runs) || [];
+  const liveRunStatus = runData?.workflow_runs_by_pk?.status || activeRun?.status;
 
   const showToast = (message: string, type: string) => {
     setToast({ message, type });

@@ -416,8 +416,8 @@ export async function POST(
 
       const stepRuns = stepRunsRes.insert_step_runs.returning;
 
-      // Execute asynchronously in background
-      executeWorkflow(
+      // Await execution so serverless environments (Vercel) execute steps to completion
+      await executeWorkflow(
         workflowRunId,
         workflow.org_id,
         workflow.workflow_steps,
@@ -514,8 +514,8 @@ export async function POST(
         approved_at: new Date().toISOString(),
       });
 
-      // Resume execution in background
-      resumeWorkflow(
+      // Await execution resume on serverless environments
+      await resumeWorkflow(
         workflowRun.id,
         workflow.org_id,
         stepRun.workflow_step.step_order,
@@ -631,8 +631,8 @@ export async function POST(
 
       const stepRuns = stepRunsRes.insert_step_runs.returning;
 
-      // Execute asynchronously in background
-      executeWorkflow(
+      // Await execution on webhook trigger
+      await executeWorkflow(
         workflowRunId,
         workflow.org_id,
         workflow.workflow_steps,

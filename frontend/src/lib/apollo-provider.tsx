@@ -28,33 +28,8 @@ function createApolloClient(token: string | null) {
     };
   });
 
-  const wsLink = typeof window !== 'undefined'
-    ? new GraphQLWsLink(
-        createClient({
-          url: HASURA_WS,
-          connectionParams: () => ({
-            headers: token ? { Authorization: `Bearer ${token}` } : {},
-          }),
-        })
-      )
-    : null;
-
-  const splitLink = wsLink
-    ? split(
-        ({ query }) => {
-          const definition = getMainDefinition(query);
-          return (
-            definition.kind === 'OperationDefinition' &&
-            definition.operation === 'subscription'
-          );
-        },
-        wsLink,
-        authLink.concat(httpLink)
-      )
-    : authLink.concat(httpLink);
-
   return new ApolloClient({
-    link: splitLink,
+    link: authLink.concat(httpLink),
     cache: new InMemoryCache(),
     defaultOptions: {
       watchQuery: { fetchPolicy: 'cache-and-network' },
