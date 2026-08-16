@@ -7,7 +7,7 @@ import { useQuery, useMutation, useSubscription } from "@apollo/client/react";
 import {
   GET_WORKFLOW_DETAIL, INSERT_WORKFLOW_STEP, UPDATE_WORKFLOW_STEP,
   DELETE_WORKFLOW_STEP, INSERT_WORKFLOW_TRIGGER, DELETE_WORKFLOW_TRIGGER,
-  TRIGGER_WORKFLOW_RUN, APPROVE_STEP, UPDATE_WORKFLOW,
+  UPDATE_WORKFLOW,
   SUBSCRIBE_STEP_RUNS, SUBSCRIBE_WORKFLOW_RUN
 } from "@/lib/graphql-operations";
 import {
@@ -256,7 +256,7 @@ function StepConfigForm({ step, onConfigChange }: { step: any; onConfigChange: (
 export default function WorkflowDetailPage() {
   const params = useParams();
   const router = useRouter();
-  const { userRole, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { token, userRole, isAuthenticated, isLoading: authLoading } = useAuth();
   const workflowId = params.id as string;
 
   const [editingStep, setEditingStep] = useState<string | null>(null);
@@ -295,22 +295,46 @@ export default function WorkflowDetailPage() {
   const [insertTrigger] = useMutation(INSERT_WORKFLOW_TRIGGER, { onCompleted: () => refetch() });
   const [deleteTrigger] = useMutation(DELETE_WORKFLOW_TRIGGER, { onCompleted: () => refetch() });
   const [updateWorkflow] = useMutation(UPDATE_WORKFLOW);
-  const [triggerRun, { loading: triggerLoading }] = useMutation(TRIGGER_WORKFLOW_RUN, {
-    onCompleted: (data: any) => {
-      setActiveRunId(data.triggerWorkflowRun.workflow_run_id);
+  const [triggerLoading, setTriggerLoading] = useState(false);
+  const triggerRun = async (opts: { variables: { workflow_id: string } }) => {
+    setTriggerLoading(true);
+    try {
+      const res = await fetch('/api/backend/api/trigger-workflow-run', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ input: { workflow_id: opts.variables.workflow_id } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to trigger workflow');
+      setActiveRunId(data.workflow_run_id);
       showToast("Workflow execution launched!", "success");
       refetch();
-    },
-    onError: (err: any) => showToast(err.message, "error"),
-  });
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setTriggerLoading(false);
+    }
+  };
 
-  const [approveStepMut, { loading: approvingStep }] = useMutation(APPROVE_STEP, {
-    onCompleted: () => {
+  const [approvingStep, setApprovingStep] = useState(false);
+  const approveStepMut = async (opts: { variables: { step_run_id: string } }) => {
+    setApprovingStep(true);
+    try {
+      const res = await fetch('/api/backend/api/approve-step', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...(token ? { Authorization: `Bearer ${token}` } : {}) },
+        body: JSON.stringify({ input: { step_run_id: opts.variables.step_run_id } }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || 'Failed to approve step');
       showToast("Step approved! Resuming execution stream.", "success");
       refetch();
-    },
-    onError: (err: any) => showToast(err.message, "error"),
-  });
+    } catch (err: any) {
+      showToast(err.message, "error");
+    } finally {
+      setApprovingStep(false);
+    }
+  };
 
   // Live Subscriptions
   const { data: stepRunsData } = useSubscription<any>(SUBSCRIBE_STEP_RUNS, {
