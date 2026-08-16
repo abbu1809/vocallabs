@@ -1,0 +1,14 @@
+[global]
+project_name = "vocallabs"
+
+[hasura]
+version = "v2.44.0"
+jwt_secrets = [
+  { type = "HS256", key = "0123456789012345678901234567890123456789012345678901234567891234" }
+]
+
+[functions]
+node = 20
+
+[postgres]
+version = "16"
