@@ -1,0 +1,133 @@
+actions:
+  - name: triggerWorkflowRun
+    definition:
+      kind: synchronous
+      handler: '{{ACTION_BASE_URL}}/api/trigger-workflow-run'
+      forward_client_headers: true
+      timeout: 120
+    permissions:
+      - role: user
+    comment: 'Triggers a workflow run. Verifies caller is owner/editor in the workflow org and checks quota.'
+
+  - name: approveStep
+    definition:
+      kind: synchronous
+      handler: '{{ACTION_BASE_URL}}/api/approve-step'
+      forward_client_headers: true
+      timeout: 30
+    permissions:
+      - role: user
+    comment: 'Approves a paused approval_gate step. Checks approver role before resuming the run.'
+
+  - name: webhookTrigger
+    definition:
+      kind: synchronous
+      handler: '{{ACTION_BASE_URL}}/api/webhook-trigger'
+      forward_client_headers: false
+      timeout: 120
+    permissions:
+      - role: public
+    comment: 'Webhook endpoint for external systems to trigger a workflow run.'
+
+  - name: registerUser
+    definition:
+      kind: synchronous
+      handler: '{{ACTION_BASE_URL}}/api/register-user'
+      forward_client_headers: false
+      timeout: 30
+    permissions:
+      - role: public
+    comment: 'Registers a new user and returns a JWT token.'
+
+  - name: loginUser
+    definition:
+      kind: synchronous
+      handler: '{{ACTION_BASE_URL}}/api/login-user'
+      forward_client_headers: false
+      timeout: 30
+    permissions:
+      - role: public
+    comment: 'Authenticates a user and returns a JWT token.'
+
+custom_types:
+  input_objects:
+    - name: TriggerWorkflowRunInput
+      fields:
+        - name: workflow_id
+          type: uuid!
+
+    - name: ApproveStepInput
+      fields:
+        - name: step_run_id
+          type: uuid!
+
+    - name: WebhookTriggerInput
+      fields:
+        - name: workflow_id
+          type: uuid!
+        - name: secret
+          type: String!
+        - name: payload
+          type: jsonb
+
+    - name: RegisterUserInput
+      fields:
+        - name: email
+          type: String!
+        - name: password
+          type: String!
+        - name: display_name
+          type: String!
+
+    - name: LoginUserInput
+      fields:
+        - name: email
+          type: String!
+        - name: password
+          type: String!
+
+  objects:
+    - name: TriggerWorkflowRunOutput
+      fields:
+        - name: workflow_run_id
+          type: uuid!
+        - name: status
+          type: String!
+        - name: message
+          type: String!
+
+    - name: ApproveStepOutput
+      fields:
+        - name: success
+          type: Boolean!
+        - name: message
+          type: String!
+        - name: workflow_run_id
+          type: uuid!
+
+    - name: WebhookTriggerOutput
+      fields:
+        - name: workflow_run_id
+          type: uuid!
+        - name: status
+          type: String!
+        - name: message
+          type: String!
+
+    - name: RegisterUserOutput
+      fields:
+        - name: user_id
+          type: uuid!
+        - name: token
+          type: String!
+        - name: message
+          type: String!
+
+    - name: LoginUserOutput
+      fields:
+        - name: user_id
+          type: uuid!
+        - name: token
+          type: String!
+        - name: message
+          type: String!

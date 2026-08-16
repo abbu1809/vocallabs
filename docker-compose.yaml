@@ -1,0 +1,63 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: always
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_USER: nhost
+      POSTGRES_PASSWORD: nhost
+      POSTGRES_DB: nhost
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./nhost/migrations/default/1_initial/up.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./nhost/seeds/default/seed.sql:/docker-entrypoint-initdb.d/02-seed.sql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U nhost']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  graphql-engine:
+    image: hasura/graphql-engine:v2.44.0
+    ports:
+      - '8080:8080'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: always
+    environment:
+      HASURA_GRAPHQL_DATABASE_URL: postgres://nhost:nhost@postgres:5432/nhost
+      HASURA_GRAPHQL_ENABLE_CONSOLE: 'true'
+      HASURA_GRAPHQL_DEV_MODE: 'true'
+      HASURA_GRAPHQL_ADMIN_SECRET: nhost-admin-secret
+      HASURA_GRAPHQL_JWT_SECRET: '{"type":"HS256","key":"0123456789012345678901234567890123456789012345678901234567891234"}'
+      HASURA_GRAPHQL_UNAUTHORIZED_ROLE: public
+      HASURA_GRAPHQL_ENABLED_LOG_TYPES: startup, http-log, webhook-log, websocket-log, query-log
+      ACTION_BASE_URL: http://functions:3001
+      HASURA_GRAPHQL_ENABLE_REMOTE_SCHEMA_PERMISSIONS: 'true'
+    healthcheck:
+      test: ['CMD', 'curl', '-f', 'http://localhost:8080/healthz']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  functions:
+    build:
+      context: ./nhost/functions
+      dockerfile: Dockerfile
+    ports:
+      - '3001:3001'
+    depends_on:
+      graphql-engine:
+        condition: service_healthy
+    restart: always
+    environment:
+      HASURA_GRAPHQL_URL: http://graphql-engine:8080/v1/graphql
+      HASURA_GRAPHQL_ADMIN_SECRET: nhost-admin-secret
+      GROQ_API_KEY: ${GROQ_API_KEY:-}
+      JWT_SECRET: '0123456789012345678901234567890123456789012345678901234567891234'
+      PORT: 3001
+
+volumes:
+  pgdata:

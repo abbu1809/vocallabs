@@ -1,0 +1,433 @@
+- table:
+    schema: public
+    name: organizations
+  array_relationships:
+    - name: org_members
+      using:
+        foreign_key_constraint_on:
+          column: org_id
+          table:
+            schema: public
+            name: org_members
+    - name: workflows
+      using:
+        foreign_key_constraint_on:
+          column: org_id
+          table:
+            schema: public
+            name: workflows
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          org_members:
+            user_id:
+              _eq: X-Hasura-User-Id
+  update_permissions:
+    - role: user
+      permission:
+        columns:
+          - name
+          - quota_limit
+        filter:
+          org_members:
+            user_id:
+              _eq: X-Hasura-User-Id
+            role:
+              _eq: owner
+        check: null
+
+- table:
+    schema: public
+    name: org_members
+  object_relationships:
+    - name: organization
+      using:
+        foreign_key_constraint_on: org_id
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          organization:
+            org_members:
+              user_id:
+                _eq: X-Hasura-User-Id
+  insert_permissions:
+    - role: user
+      permission:
+        columns:
+          - org_id
+          - user_id
+          - role
+        check:
+          organization:
+            org_members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _eq: owner
+  update_permissions:
+    - role: user
+      permission:
+        columns:
+          - role
+        filter:
+          organization:
+            org_members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _eq: owner
+        check: null
+  delete_permissions:
+    - role: user
+      permission:
+        filter:
+          organization:
+            org_members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _eq: owner
+
+- table:
+    schema: public
+    name: workflows
+  object_relationships:
+    - name: organization
+      using:
+        foreign_key_constraint_on: org_id
+  array_relationships:
+    - name: workflow_steps
+      using:
+        foreign_key_constraint_on:
+          column: workflow_id
+          table:
+            schema: public
+            name: workflow_steps
+    - name: workflow_triggers
+      using:
+        foreign_key_constraint_on:
+          column: workflow_id
+          table:
+            schema: public
+            name: workflow_triggers
+    - name: workflow_runs
+      using:
+        foreign_key_constraint_on:
+          column: workflow_id
+          table:
+            schema: public
+            name: workflow_runs
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          organization:
+            org_members:
+              user_id:
+                _eq: X-Hasura-User-Id
+  insert_permissions:
+    - role: user
+      permission:
+        columns:
+          - id
+          - org_id
+          - name
+          - description
+          - is_active
+          - created_by
+        check:
+          organization:
+            org_members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _in:
+                      - owner
+                      - editor
+        set:
+          created_by: X-Hasura-User-Id
+  update_permissions:
+    - role: user
+      permission:
+        columns:
+          - name
+          - description
+          - is_active
+        filter:
+          organization:
+            org_members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _in:
+                      - owner
+                      - editor
+        check: null
+  delete_permissions:
+    - role: user
+      permission:
+        filter:
+          organization:
+            org_members:
+              _and:
+                - user_id:
+                    _eq: X-Hasura-User-Id
+                - role:
+                    _eq: owner
+
+- table:
+    schema: public
+    name: workflow_steps
+  object_relationships:
+    - name: workflow
+      using:
+        foreign_key_constraint_on: workflow_id
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          workflow:
+            organization:
+              org_members:
+                user_id:
+                  _eq: X-Hasura-User-Id
+  insert_permissions:
+    - role: user
+      permission:
+        columns:
+          - id
+          - workflow_id
+          - step_order
+          - name
+          - step_type
+          - config
+        check:
+          workflow:
+            organization:
+              org_members:
+                _and:
+                  - user_id:
+                      _eq: X-Hasura-User-Id
+                  - role:
+                      _in:
+                        - owner
+                        - editor
+  update_permissions:
+    - role: user
+      permission:
+        columns:
+          - step_order
+          - name
+          - step_type
+          - config
+        filter:
+          workflow:
+            organization:
+              org_members:
+                _and:
+                  - user_id:
+                      _eq: X-Hasura-User-Id
+                  - role:
+                      _in:
+                        - owner
+                        - editor
+        check: null
+  delete_permissions:
+    - role: user
+      permission:
+        filter:
+          workflow:
+            organization:
+              org_members:
+                _and:
+                  - user_id:
+                      _eq: X-Hasura-User-Id
+                  - role:
+                      _in:
+                        - owner
+                        - editor
+
+- table:
+    schema: public
+    name: workflow_triggers
+  object_relationships:
+    - name: workflow
+      using:
+        foreign_key_constraint_on: workflow_id
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          workflow:
+            organization:
+              org_members:
+                user_id:
+                  _eq: X-Hasura-User-Id
+  insert_permissions:
+    - role: user
+      permission:
+        columns:
+          - id
+          - workflow_id
+          - trigger_type
+          - config
+          - is_active
+        check:
+          workflow:
+            organization:
+              org_members:
+                _and:
+                  - user_id:
+                      _eq: X-Hasura-User-Id
+                  - role:
+                      _in:
+                        - owner
+                        - editor
+  update_permissions:
+    - role: user
+      permission:
+        columns:
+          - trigger_type
+          - config
+          - is_active
+        filter:
+          workflow:
+            organization:
+              org_members:
+                _and:
+                  - user_id:
+                      _eq: X-Hasura-User-Id
+                  - role:
+                      _in:
+                        - owner
+                        - editor
+        check: null
+  delete_permissions:
+    - role: user
+      permission:
+        filter:
+          workflow:
+            organization:
+              org_members:
+                _and:
+                  - user_id:
+                      _eq: X-Hasura-User-Id
+                  - role:
+                      _in:
+                        - owner
+                        - editor
+
+- table:
+    schema: public
+    name: workflow_runs
+  object_relationships:
+    - name: workflow
+      using:
+        foreign_key_constraint_on: workflow_id
+  array_relationships:
+    - name: step_runs
+      using:
+        foreign_key_constraint_on:
+          column: workflow_run_id
+          table:
+            schema: public
+            name: step_runs
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          workflow:
+            organization:
+              org_members:
+                user_id:
+                  _eq: X-Hasura-User-Id
+  insert_permissions:
+    - role: user
+      permission:
+        columns:
+          - id
+          - workflow_id
+          - status
+          - triggered_by
+          - started_by
+          - started_at
+        check:
+          workflow:
+            organization:
+              org_members:
+                _and:
+                  - user_id:
+                      _eq: X-Hasura-User-Id
+                  - role:
+                      _in:
+                        - owner
+                        - editor
+
+- table:
+    schema: public
+    name: step_runs
+  object_relationships:
+    - name: workflow_run
+      using:
+        foreign_key_constraint_on: workflow_run_id
+    - name: workflow_step
+      using:
+        foreign_key_constraint_on: workflow_step_id
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          workflow_run:
+            workflow:
+              organization:
+                org_members:
+                  user_id:
+                    _eq: X-Hasura-User-Id
+
+- table:
+    schema: public
+    name: workflow_data
+  object_relationships:
+    - name: organization
+      using:
+        foreign_key_constraint_on: org_id
+    - name: workflow_run
+      using:
+        foreign_key_constraint_on: workflow_run_id
+    - name: step_run
+      using:
+        foreign_key_constraint_on: step_run_id
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          organization:
+            org_members:
+              user_id:
+                _eq: X-Hasura-User-Id
+
+- table:
+    schema: public
+    name: org_usage_stats
+  select_permissions:
+    - role: user
+      permission:
+        columns: '*'
+        filter:
+          org_id:
+            _in: X-Hasura-Allowed-Org-Ids
